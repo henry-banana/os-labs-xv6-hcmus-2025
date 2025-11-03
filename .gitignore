@@ -1,1 +1,7 @@
 temp
+
+# macOS
+.DS_Store
+
+# Editor/IDE
+.vscode/
