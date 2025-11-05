@@ -102,6 +102,40 @@ extern uint64 sys_link(void);
 extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
 
+/* ==================== BEGIN: CUSTOM CODE (by Phuc Hoang) ==================== */
+
+// Định nghĩa prototype cho hàm xử lý system call trace
+extern uint64 sys_trace(void);
+
+// Tên của các system call, dùng cho việc in ra log khi thực hiện trace
+// => Hiện chưa sử dụng, make sẽ báo lỗi nên comment lại
+// static char *syscall_names[] = {
+//   [SYS_fork]    "fork",
+//   [SYS_exit]    "exit",
+//   [SYS_wait]    "wait",
+//   [SYS_pipe]    "pipe",
+//   [SYS_read]    "read",
+//   [SYS_kill]    "kill",
+//   [SYS_exec]    "exec",
+//   [SYS_fstat]   "fstat",
+//   [SYS_chdir]   "chdir",
+//   [SYS_dup]     "dup",
+//   [SYS_getpid]  "getpid",
+//   [SYS_sbrk]    "sbrk",
+//   [SYS_pause]   "pause",
+//   [SYS_uptime]  "uptime",
+//   [SYS_open]    "open",
+//   [SYS_write]   "write",
+//   [SYS_mknod]   "mknod",
+//   [SYS_unlink]  "unlink",
+//   [SYS_link]    "link",
+//   [SYS_mkdir]   "mkdir",
+//   [SYS_close]   "close",
+//   [SYS_trace]   "trace",
+// };
+
+/* ==================== END: CUSTOM CODE (by Phuc Hoang) ==================== */
+
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
 static uint64 (*syscalls[])(void) = {
@@ -126,6 +160,10 @@ static uint64 (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+
+/* ==================== BEGIN: CUSTOM CODE (by Phuc Hoang) ==================== */
+[SYS_trace]   sys_trace,
+/* ==================== END: CUSTOM CODE (by Phuc Hoang) ==================== */
 };
 
 void
