@@ -24,3 +24,5 @@
 /* ==================== BEGIN: CUSTOM CODE (by Phuc Hoang) ==================== */
 #define SYS_trace  22     // System call number for trace
 /* ==================== END: CUSTOM CODE (by Phuc Hoang) ==================== */
+
+#define SYS_sysinfo 23

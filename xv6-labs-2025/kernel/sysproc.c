@@ -6,6 +6,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "vm.h"
+#include "sysinfo.h"
 
 uint64
 sys_exit(void)
@@ -116,3 +117,23 @@ sys_trace(void)
   return 0;
 }
 /* ==================== END: CUSTOM CODE (by Phuc Hoang) ==================== */
+
+// System call handler for sysinfo
+uint64
+sys_sysinfo(void)
+{
+  uint64 addr;              // User-space address
+  struct sysinfo info;      // Kernel-space struct
+  struct proc *p = myproc();
+  // Get user-space pointer from argument 0
+  argaddr(0, &addr);
+  // Collect system information
+  info.freemem = kfreemem();
+  info.nproc = count_process();
+  info.nopenfiles = count_files();
+  // Copy struct from kernel space to user space
+  if(copyout(p->pagetable, addr, (char *)&info, sizeof(info)) < 0) {
+    return -1;  // Copy failed (invalid address)
+  }
+  return 0;  // Success
+}

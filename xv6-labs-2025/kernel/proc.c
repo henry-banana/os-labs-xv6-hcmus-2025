@@ -689,3 +689,20 @@ procdump(void)
     printf("\n");
   }
 }
+
+// Count number of processes (state != UNUSED)
+uint64
+count_process(void)
+{
+  struct proc *p;
+  uint64 count = 0;
+  // Iterate through process table
+  for(p = proc; p < &proc[NPROC]; p++) {
+    acquire(&p->lock);  // Lock individual process
+    if(p->state != UNUSED) {
+      count++;
+    }
+    release(&p->lock);
+  }
+  return count;
+}
