@@ -178,3 +178,19 @@ filewrite(struct file *f, uint64 addr, int n)
   return ret;
 }
 
+// Count number of open file descriptors
+// Returns count of files with ref > 0
+uint64
+count_files(void)
+{
+  struct file *f;
+  uint64 count = 0;
+  acquire(&ftable.lock);  // Lock file table
+  for(f = ftable.file; f < ftable.file + NFILE; f++) {
+    if(f->ref > 0) {  // ref > 0 means file is open
+      count++;
+    }
+  }  
+  release(&ftable.lock);
+  return count;
+}
