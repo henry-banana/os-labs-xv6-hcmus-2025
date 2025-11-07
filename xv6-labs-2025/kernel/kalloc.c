@@ -90,3 +90,18 @@ kalloc(void)
   return (void*)r;
 }
 
+// Count free memory in bytes
+// Returns total bytes in free page list
+uint64
+kfreemem(void)
+{
+  struct run *r;
+  uint64 free_bytes = 0;
+  acquire(&kmem.lock);  // Lock the allocator
+  // Walk through free list
+  for(r = kmem.freelist; r; r = r->next) {
+    free_bytes += PGSIZE;  // Each node = 1 page
+  }
+  release(&kmem.lock);
+  return free_bytes;
+}
