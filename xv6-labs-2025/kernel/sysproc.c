@@ -137,3 +137,14 @@ sys_sysinfo(void)
   }
   return 0;  // Success
 }
+
+// TEMPORARY - For testing
+uint64
+sys_testhelpers(void)
+{
+  printf("Free memory: %ld bytes\n", kfreemem());
+  printf("Processes: %ld\n", count_process());
+  printf("Open files: %ld\n", count_files());
+  return 0;
+}
+//Hiệp dùng để test, sau Hòa test thì đổi cái này

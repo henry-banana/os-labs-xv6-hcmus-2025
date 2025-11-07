@@ -102,7 +102,7 @@ extern uint64 sys_link(void);
 extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
 extern uint64 sys_sysinfo(void);
-
+extern uint64 sys_testhelpers(void);
 
 /* ==================== BEGIN: CUSTOM CODE (by Phuc Hoang) ==================== */
 
@@ -134,6 +134,7 @@ static char *syscall_names[] = {
   [SYS_close]   "close",
   [SYS_trace]   "trace",
   [SYS_sysinfo] "sysinfo",
+  [SYS_testhelpers] "testhelpers", //Hiệp dùng để test, sau Hòa test thì đổi cái này
 };
 
 /* ==================== END: CUSTOM CODE (by Phuc Hoang) ==================== */
@@ -167,6 +168,7 @@ static uint64 (*syscalls[])(void) = {
 [SYS_trace]   sys_trace,
 /* ==================== END: CUSTOM CODE (by Phuc Hoang) ==================== */
 [SYS_sysinfo] sys_sysinfo,
+[SYS_testhelpers] sys_testhelpers, //Hiệp dùng để test, sau Hòa test thì đổi cái này
 };
 
 void

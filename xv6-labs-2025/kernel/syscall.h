@@ -26,3 +26,5 @@
 /* ==================== END: CUSTOM CODE (by Phuc Hoang) ==================== */
 
 #define SYS_sysinfo 23
+
+#define SYS_testhelpers  24 //Hiệp dùng để test, sau Hòa test thì đổi cái này
