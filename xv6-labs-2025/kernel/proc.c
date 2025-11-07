@@ -273,6 +273,10 @@ kfork(void)
   }
   np->sz = p->sz;
 
+  /* ==================== BEGIN: CUSTOM CODE (by Phuc Hoang) ==================== */
+  np->trace_mask = p->trace_mask; // Inherit trace mask from parent
+  /* ==================== END: CUSTOM CODE (by Phuc Hoang) ==================== */
+
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
 
