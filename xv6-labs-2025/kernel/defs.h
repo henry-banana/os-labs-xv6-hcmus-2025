@@ -33,7 +33,7 @@ void            fileinit(void);
 int             fileread(struct file*, uint64, int n);
 int             filestat(struct file*, uint64 addr);
 int             filewrite(struct file*, uint64, int n);
-uint64          count_files(void);
+uint64          count_files(void); // By Tan Hiep Le
 
 // fs.c
 void            fsinit(int);
@@ -60,7 +60,7 @@ void            ireclaim(int);
 void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
-uint64          kfreemem(void);
+uint64          kfreemem(void); // By Tan Hiep Le
 
 // log.c
 void            initlog(int, struct superblock*);
@@ -103,7 +103,7 @@ void            yield(void);
 int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
-uint64          count_process(void);
+uint64          count_process(void); // By Tan Hiep Le
 
 // swtch.S
 void            swtch(struct context*, struct context*);

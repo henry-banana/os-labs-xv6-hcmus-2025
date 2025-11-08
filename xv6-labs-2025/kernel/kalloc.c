@@ -90,6 +90,7 @@ kalloc(void)
   return (void*)r;
 }
 
+// By Tan Hiep Le
 // Count free memory in bytes
 // Returns total bytes in free page list
 uint64

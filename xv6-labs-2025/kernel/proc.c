@@ -690,6 +690,7 @@ procdump(void)
   }
 }
 
+// By Tan Hiep Le
 // Count number of processes (state != UNUSED)
 uint64
 count_process(void)

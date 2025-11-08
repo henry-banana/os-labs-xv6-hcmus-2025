@@ -6,7 +6,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "vm.h"
-#include "sysinfo.h"
+#include "sysinfo.h" // By Tan Hiep Le
 
 uint64
 sys_exit(void)
@@ -118,6 +118,7 @@ sys_trace(void)
 }
 /* ==================== END: CUSTOM CODE (by Phuc Hoang) ==================== */
 
+// By Tan Hiep Le
 // System call handler for sysinfo
 uint64
 sys_sysinfo(void)

@@ -101,7 +101,7 @@ extern uint64 sys_unlink(void);
 extern uint64 sys_link(void);
 extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
-extern uint64 sys_sysinfo(void);
+extern uint64 sys_sysinfo(void); // By Tan Hiep Le
 
 
 /* ==================== BEGIN: CUSTOM CODE (by Phuc Hoang) ==================== */
@@ -133,8 +133,8 @@ static char *syscall_names[] = {
   [SYS_mkdir]   "mkdir",
   [SYS_close]   "close",
   [SYS_trace]   "trace",
-  [SYS_sysinfo] "sysinfo",
-};
+  [SYS_sysinfo] "sysinfo", // By Tan Hiep Le
+}; 
 
 /* ==================== END: CUSTOM CODE (by Phuc Hoang) ==================== */
 
@@ -166,7 +166,8 @@ static uint64 (*syscalls[])(void) = {
 /* ==================== BEGIN: CUSTOM CODE (by Phuc Hoang) ==================== */
 [SYS_trace]   sys_trace,
 /* ==================== END: CUSTOM CODE (by Phuc Hoang) ==================== */
-[SYS_sysinfo] sys_sysinfo,
+
+[SYS_sysinfo] sys_sysinfo, // By Tan Hiep Le
 };
 
 void
