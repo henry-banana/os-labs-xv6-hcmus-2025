@@ -178,17 +178,30 @@ syscall(void)
 
   num = p->trapframe->a7;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
-    // Use num to lookup the system call function for num, call it,
-    // and store its return value in p->trapframe->a0
-    p->trapframe->a0 = syscalls[num]();
 
-    /* ==================== BEGIN: CUSTOM CODE (by Phuc Hoang) ==================== */
-    // If trace mask has bit corresponding to syscall number set, print trace info
-    if (p->trace_mask & (1 << num)) {
-      printf("%d: syscall %s -> %ld\n",
-              p->pid,
-              syscall_names[num],
-              p->trapframe->a0);
+    // Xử lý đặc biệt cho SYS_exit
+    if (num == SYS_exit) {
+      if (p->trace_mask & (1 << num)) {
+        printf("%d: syscall %s -> exit\n",
+                p->pid,
+                syscall_names[num]);
+      }
+
+      syscalls[num]();
+    }
+    else {
+      // Use num to lookup the system call function for num, call it,
+      // and store its return value in p->trapframe->a0
+      p->trapframe->a0 = syscalls[num]();
+  
+      /* ==================== BEGIN: CUSTOM CODE (by Phuc Hoang) ==================== */
+      // If trace mask has bit corresponding to syscall number set, print trace info
+      if (p->trace_mask & (1 << num)) {
+        printf("%d: syscall %s -> %ld\n",
+                p->pid,
+                syscall_names[num],
+                p->trapframe->a0);
+      }
     }
     /* ==================== END: CUSTOM CODE (by Phuc Hoang) ==================== */
   } else {

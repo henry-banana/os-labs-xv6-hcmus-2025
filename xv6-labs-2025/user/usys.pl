@@ -42,3 +42,5 @@ entry("getpid");
 entry("sbrk");
 entry("pause");
 entry("uptime");
+entry("trace");     # By Thai Hoa
+entry("sysinfo");   # By Thai Hoa
