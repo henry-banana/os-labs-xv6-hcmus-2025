@@ -226,7 +226,7 @@ main(int argc, char *argv[])
     printf("\nRESULT: AUTOMATED TESTS FAILED.\n");
   } else {
     printf("\nRESULT: ALL AUTOMATED TESTS PASSED.\n");
-    printf("(Please check carefully the output above my bruh!!\n");
+    printf("(Please check carefully the output above!\n");
   }
   
   exit(0);
