@@ -6,200 +6,276 @@
 #include "kernel/sysinfo.h"  // For struct sysinfo
 #include "kernel/syscall.h"  // For SYS_ defines (SYS_getpid, ...)
 
-static int total_tests = 0;
-static int failed_tests = 0;
+int failed_tests = 0;
+int total_tests = 0;
 
-void fail(char *msg) {
-  printf(" [FAIL]\n");
-  printf("   Error: %s\n", msg);
-  failed_tests++;
+int check_u64(char* description, uint64 actual, uint64 expected) {
+    printf("  -> Kiểm tra: %s\n", description);
+    printf("     - Mong đợi: %ld\n", (unsigned long) expected);
+    printf("     - Thực tế:   %ld\n", (unsigned long)  actual);
+    if (actual == expected) {
+        printf("     - Kết quả:  [OK]\n");
+        return 1;
+    } else {
+        printf("     - Kết quả:  [FAIL]\n");
+        return 0;
+    }
 }
 
-void pass() {
-  printf(" [OK]\n");
+// Hàm kiểm tra hai giá trị int
+int check_int(char* description, int actual, int expected) {
+    printf("  -> Kiểm tra: %s\n", description);
+    printf("     - Mong đợi: %ld\n", (unsigned long) expected);
+    printf("     - Thực tế:   %ld\n", (unsigned long) actual);
+    if (actual == expected) {
+        printf("     - Kết quả:  [OK]\n");
+        return 1;
+    } else {
+        printf("     - Kết quả:  [FAIL]\n");
+        return 0;
+    }
 }
 
+// Hàm kiểm tra một điều kiện là đúng
+int check_true(char* description, int condition) {
+    printf("  -> Kiểm tra: %s\n", description);
+    printf("     - Mong đợi: true (khác 0)\n");
+    printf("     - Thực tế:   %s\n", condition ? "true" : "false");
+    if (condition) {
+        printf("     - Kết quả:  [OK]\n");
+        return 1;
+    } else {
+        printf("     - Kết quả:  [FAIL]\n");
+        return 0;
+    }
+}
+
+
+// Hàm trợ giúp để gọi sysinfo và xử lý lỗi cơ bản
 void sinfo(struct sysinfo *info) {
   if (sysinfo(info) < 0) {
-    fail("sysinfo() call failed (returned -1)");
+    printf("   LỖI NGHIÊM TRỌNG: Lệnh gọi sysinfo() thất bại. Dừng test.\n");
+    exit(1); 
   }
 }
 
-// === sysinfo Tests ===
+// Hàm kiểm tra A < B cho uint64
+int check_less_than_u64(char* description, uint64 val_a, uint64 val_b) {
+    printf("  -> Kiểm tra: %s\n", description);
+    printf("     - Mong đợi: Giá trị thực tế < Giá trị ngưỡng \n");
+    printf("     - Thực tế:   %ld < %ld\n", (unsigned long) val_a, (unsigned long) val_b);
+    if (val_a < val_b) {
+        printf("     - Kết quả:  [OK]\n");
+        return 1;
+    } else {
+        printf("     - Kết quả:  [FAIL]\n");
+        return 0;
+    }
+}
 
-// Test 1: Checks if sysinfo() correctly handles bad pointers
+// Hàm kiểm tra A xấp xỉ B (trong khoảng sai số) cho uint64
+int check_approx_eq_u64(char* description, uint64 actual, uint64 expected, uint64 tolerance) {
+    printf("  -> Kiểm tra: %s\n", description);
+    uint64 lower_bound = expected - tolerance;
+    uint64 upper_bound = expected + tolerance;
+    printf("     - Mong đợi:  Trong khoảng [%ld, %ld]\n", (unsigned long) lower_bound, (unsigned long) upper_bound);
+    printf("     - Thực tế:   %ld\n", (unsigned long) actual);
+    if (actual >= lower_bound && actual <= upper_bound) {
+        printf("     - Kết quả:  [OK]\n");
+        return 1;
+    } else {
+        printf("     - Kết quả:  [FAIL]\n");
+        return 0;
+    }
+}
+
+// ==================================================
+// ======= sysinfo Tests ============================
+// ==================================================
+
 void test_sysinfo_bad_pointer() {
   total_tests++;
-  printf("Test: sysinfo(bad_ptr)...");
+  printf("\n\nTest: sysinfo() với con trỏ không hợp lệ...\n");
+  int pass = 1;
+
+  if(!check_int("sysinfo(NULL) nên trả về -1", sysinfo(0x0), -1)) 
+    pass = 0;
   
-  if (sysinfo(0x0) != -1) {
-    fail("sysinfo(NULL) should have returned -1");
-    return;
-  }
-  if (sysinfo((struct sysinfo *)0x80000000) != -1) {
-    fail("sysinfo(kernel_addr) should have returned -1");
-    return;
-  }
-  
-  pass();
+  if(!check_int("sysinfo(kernel_addr) nên trả về -1", sysinfo((struct sysinfo *)0x80000000), -1))
+  pass = 0;
+
+  if(!pass) failed_tests++;
+
+  printf("... Kết thúc Test con trỏ không hợp lệ: %s\n", pass ? "[THÀNH CÔNG]" : "[THẤT BẠI]");
 }
 
-// Test 2: Checks if sysinfo.freemem correctly reflects sbrk() allocations
 void test_sysinfo_freemem() {
   total_tests++;
-  printf("Test: sysinfo.freemem (with sbrk)...");
-  
+  printf("\n\nTest: sysinfo.freemem với sbrk()...\n");
+  int pass = 1;
+
   struct sysinfo info;
-  uint64 initial_free;
-  
   sinfo(&info);
-  initial_free = info.freemem;
-  
+  uint64 initial_free = info.freemem;
+  printf("  - Bộ nhớ trống ban đầu: %ld\n", (unsigned long)initial_free);
+
   char *mem = sbrk(PGSIZE);
-  if (mem == (char*)-1) {
-    fail("sbrk(PGSIZE) failed");
+  if (!check_true("sbrk(PGSIZE) phải thành công", mem != (char*)-1)) {
+    failed_tests++;
+    printf("... Kết thúc Test freemem: [THẤT BẠI]\n");
     return;
   }
   
   sinfo(&info);
-  if (info.freemem >= initial_free) {
-    fail("freemem did not decrease after sbrk()");
-    return;
+  uint64 free_after_alloc = info.freemem;
+  if (!check_less_than_u64("Bộ nhớ trống phải giảm sau khi cấp phát", free_after_alloc, initial_free)) {
+    pass = 0;
   }
-  
-  if (sbrk(-PGSIZE) == (char*)-1) {
-    fail("sbrk(-PGSIZE) failed");
-    return;
-  }
-  
+
+  sbrk(-PGSIZE);
   sinfo(&info);
-  if (info.freemem < initial_free - 100 || info.freemem > initial_free + 100) {
-    fail("freemem did not return to initial value after sbrk(-PGSIZE)");
-    return;
-  }
+  uint64 final_free = info.freemem;
+  printf("  - Bộ nhớ trống cuối cùng: %ld\n", (unsigned long)final_free);
   
-  pass();
+  if (!check_approx_eq_u64("Bộ nhớ trống phải quay về gần giá trị ban đầu", final_free, initial_free, 100)) {
+    pass = 0;
+  }
+
+  if(!pass) failed_tests++;
+  printf("... Kết thúc Test freemem: %s\n", pass ? "[THÀNH CÔNG]" : "[THẤT BẠI]");
 }
 
-// Test 3: Checks if sysinfo.nproc correctly counts processes during fork/exit
 void test_sysinfo_nproc() {
   total_tests++;
-  printf("Test: sysinfo.nproc (with fork)...");
-  
+  printf("\n\nTest: sysinfo.nproc với fork()...\n");
+  int pass = 1;
+
   struct sysinfo info;
-  uint64 nproc;
-  
   sinfo(&info);
-  nproc = info.nproc;
+  uint64 nproc_before = info.nproc;
+  printf("  - Số tiến trình ban đầu: %ld\n", (unsigned long)nproc_before);
 
   int pid = fork();
   if (pid < 0) {
-    fail("fork() failed");
-    return;
+      printf("  -> Kiểm tra: fork() phải thành công\n");
+      printf("     - Kết quả: [FAIL] - fork() trả về giá trị âm.\n");
+      failed_tests++;
+      printf("... Kết thúc Test nproc: [THẤT BẠI]\n");
+      return;
   }
   
   if (pid == 0) {
-    // Child process
+    // === TIẾN TRÌNH CON ===
+    // Con chỉ kiểm tra và thoát, không in nhiều để tránh race condition
     sinfo(&info);
-    if (info.nproc != nproc + 1) {
-      printf("FAIL (from child): nproc is %ld instead of %ld\n", info.nproc, nproc + 1);
+    if(info.nproc == nproc_before + 1) {
+      exit(0);
+    } else {
+      exit(1);
     }
-    exit(0);
   }
   
-  // Parent process
-  wait(0);
+  // === TIẾN TRÌNH CHA ===
+  // Cha đợi con kết thúc rồi mới phân tích kết quả
+  int status;
+  wait(&status); 
+  
+  printf("  -> Kiểm tra: fork() đã tạo tiến trình mới thành công.\n");
+  printf("     - Kết quả: [OK]\n");
+
+  // Kiểm tra mã thoát của con
+  if (!check_int("Tiến trình con phải thoát với mã 0 (báo hiệu nproc đúng)", status, 0)) {
+    pass = 0;
+  }
+
   sinfo(&info);
-  
-  if (info.nproc != nproc) {
-    fail("nproc did not return to initial value after child exit");
-    return;
+  if(!check_u64("nproc quay về giá trị ban đầu sau khi con thoát", info.nproc, nproc_before)) {
+    pass = 0;
   }
   
-  pass();
+  if(!pass) {
+      failed_tests++;
+  }
+  printf("... Kết thúc Test nproc: %s\n", pass ? "[THÀNH CÔNG]" : "[THẤT BẠI]");
 }
 
-// Test 4: Checks if sysinfo.nopenfiles correctly counts open files
 void test_sysinfo_nfile() {
   total_tests++;
-  printf("Test: sysinfo.nopenfiles (with open/close)...");
+  printf("\n\nTest: sysinfo.nopenfiles với open()/close()...\n");
+  int pass = 1;
   
   struct sysinfo info;
-  uint64 nfile;
-  
   sinfo(&info);
-  nfile = info.nopenfiles;
+  uint64 nfile_before = info.nopenfiles;
+  printf("  - Số file đang mở ban đầu: %ld\n", (unsigned long)nfile_before);
 
   int fd = open("README", 0);
-  if (fd < 0) {
-    fail("Could not open README");
+  if (!check_true("Mở file README phải thành công", fd >= 0)) {
+    failed_tests++;
+    printf("... Kết thúc Test nfile: [THẤT BẠI]\n");
     return;
   }
   
   sinfo(&info);
-  if (info.nopenfiles != nfile + 1) {
-    fail("nfile did not increment after open()");
-    return;
-  }
+  if(!check_u64("nopenfiles phải tăng lên 1 sau khi open()", info.nopenfiles, nfile_before + 1))
+    pass = 0;
 
   close(fd);
   sinfo(&info);
   
-  if (info.nopenfiles != nfile) {
-    fail("nopenfiles did not return to initial value after close()");
-    return;
-  }
+  if(!check_u64("nopenfiles phải quay về ban đầu sau khi close()", info.nopenfiles, nfile_before))
+    pass = 0;
   
-  pass();
+  if(!pass) failed_tests++;
+  printf("... Kết thúc Test nfile: %s\n", pass ? "[THÀNH CÔNG]" : "[THẤT BẠI]");
 }
 
-
-// === trace Tests (Visual Inspection) ===
+// === trace Tests ===
 
 void test_trace_visual() {
-  printf("\n== Starting TRACE Visual Tests ==\n");
-  printf("Note: The following tests require visual inspection of the output.\n\n");
+  printf("\n== Bắt đầu Test TRACE (Kiểm tra bằng mắt) ==\n");
+  printf("Lưu ý: Các test sau đây yêu cầu bạn tự kiểm tra output.\n\n");
 
-  // 1. Test simple syscall trace
-  printf("Test 1: Tracing 'getpid' (syscall %d).\n", SYS_getpid);
-  printf("  -> YOU SHOULD SEE 1 trace line for 'getpid':\n");
+  // 1. Test syscall trace đơn giản
+  printf("Test 1: Trace syscall 'getpid' (syscall %ld).\n", (unsigned long)SYS_getpid);
+  printf("  -> BẠN NÊN THẤY 1 dòng trace cho 'getpid':\n");
   trace(1 << SYS_getpid);
   getpid();
   trace(0);
 
   // 2. Test trace mask
-  printf("\nTest 2: Tracing 'read' (%d) & 'write' (%d). NOT tracing 'open' (%d).\n", SYS_read, SYS_write, SYS_open);
-  printf("  -> YOU SHOULD SEE 'write' and 'read', BUT NOT 'open':\n");
+  printf("\nTest 2: Trace 'read' (%ld) & 'write' (%ld). KHÔNG trace 'open' (%ld).\n", (unsigned long)SYS_read, (unsigned long)SYS_write, (unsigned long)SYS_open);
+  printf("  -> BẠN NÊN THẤY 'write' và 'read', NHƯNG KHÔNG THẤY 'open':\n");
   
   trace((1 << SYS_read) | (1 << SYS_write));
-  int fd = open("README", 0); // <-- This should NOT be traced
+  int fd = open("README", 0); 
   if (fd < 0) {
-    printf("Error: open README failed for trace test.\n");
+    printf("Lỗi: không mở được README cho test trace.\n");
   } else {
     char buf[10];
-    read(fd, buf, 10);      // <-- This MUST be traced
+    read(fd, buf, 10);    
     close(fd);
   }
-  write(1, "  (Test write syscall)\n", 23); // <-- This MUST be traced
+  write(1, "  (Test syscall write)\n", 23); 
   trace(0);
 
-  // 3. Test mask inheritance on fork() and 'exit' tracing
-  printf("\nTest 3: Tracing 'fork' (%d), 'exit' (%d), 'wait' (%d).\n", SYS_fork, SYS_exit, SYS_wait);
-  printf("  -> YOU SHOULD SEE 'fork', 'exit' (from child), and 'wait' (from parent):\n");
+  // 3. Test kế thừa mask qua fork() và trace 'exit'
+  printf("\nTest 3: Trace 'fork' (%ld), 'exit' (%ld), 'wait' (%ld).\n", (unsigned long)SYS_fork, (unsigned long)SYS_exit, (unsigned long)SYS_wait);
+  printf("  -> BẠN NÊN THẤY 'fork', 'exit' (từ con), và 'wait' (từ cha):\n");
 
   trace((1 << SYS_fork) | (1 << SYS_exit) | (1 << SYS_wait) | (1 << SYS_getpid));
 
-  int pid = fork(); // <-- This MUST be traced
+  int pid = fork(); 
   if (pid == 0) {
-    printf("  [Child PID %d] Running and exiting...\n", getpid());
-    exit(0); // <-- This MUST be traced
+    printf("  [Con PID %ld] Đang chạy và sẽ thoát...\n", (unsigned long)getpid());
+    exit(0); 
   }
   
-  wait(0); // <-- This MUST be traced
-  printf("  [Parent] Child has exited.\n");
+  wait(0); 
+  printf("  [Cha] Tiến trình con đã thoát.\n");
   trace(0);
 
-  printf("\n== Finished TRACE Visual Tests ==\n");
+  printf("\n== Kết thúc Test TRACE ==\n");
 }
 
 // === Main test runner ===
@@ -207,26 +283,29 @@ void test_trace_visual() {
 int
 main(int argc, char *argv[])
 {
-  printf("=== STARTING COMPREHENSIVE LAB 1 TEST ===\n\n");
+  total_tests = 0;
+  failed_tests = 0;
+
+  printf("=== BẮT ĐẦU BỘ TEST TOÀN DIỆN CHO LAB 1 ===\n\n");
   
-  printf("--- Part 1: Automated sysinfo Tests ---\n");
+  printf("--- Phần 1: Test sysinfo tự động ---\n");
   test_sysinfo_bad_pointer();
   test_sysinfo_freemem();
   test_sysinfo_nproc();
   test_sysinfo_nfile();
   
-  printf("\n--- Part 2: Visual trace Tests ---\n");
+  printf("\n--- Phần 2: Test trace bằng mắt ---\n");
   test_trace_visual();
   
-  printf("\n--- SUMMARY ---\n");
-  printf("Automated tests run: %d\n", total_tests);
-  printf("Automated tests failed: %d\n", failed_tests);
+  printf("\n--- TỔNG KẾT ---\n");
+  printf("Số test tự động đã chạy: %ld\n", (unsigned long)total_tests);
+  printf("Số test tự động thất bại: %ld\n", (unsigned long)failed_tests);
   
   if (failed_tests > 0) {
-    printf("\nRESULT: AUTOMATED TESTS FAILED.\n");
+    printf("\nKẾT QUẢ: CÓ TEST TỰ ĐỘNG THẤT BẠI.\n");
   } else {
-    printf("\nRESULT: ALL AUTOMATED TESTS PASSED.\n");
-    printf("(Please check carefully the output above!\n");
+    printf("\nKẾT QUẢ: TẤT CẢ TEST TỰ ĐỘNG ĐÃ THÀNH CÔNG.\n");
+    printf("(Vui lòng kiểm tra kỹ output của phần test trace ở trên!)\n");
   }
   
   exit(0);
