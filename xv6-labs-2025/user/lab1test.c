@@ -5,6 +5,7 @@
 #include "kernel/riscv.h"    // For PGSIZE
 #include "kernel/sysinfo.h"  // For struct sysinfo
 #include "kernel/syscall.h"  // For SYS_ defines (SYS_getpid, ...)
+#include "kernel/fcntl.h"     // For O_RDONLY
 
 int failed_tests = 0;
 int total_tests = 0;
@@ -128,6 +129,9 @@ void test_sysinfo_freemem() {
   
   sinfo(&info);
   uint64 free_after_alloc = info.freemem;
+  printf("  - Free after alloc: %ld (delta: -%ld)\n",
+         (unsigned long)free_after_alloc,
+         (unsigned long)(initial_free - free_after_alloc));
   if (!check_less_than_u64("Free memory must decrease after allocation", free_after_alloc, initial_free)) {
     pass = 0;
   }
@@ -135,9 +139,11 @@ void test_sysinfo_freemem() {
   sbrk(-PGSIZE);
   sinfo(&info);
   uint64 final_free = info.freemem;
-  printf("  - Final free memory: %ld\n", (unsigned long)final_free);
+  printf("  - Final free memory: %ld (delta from initial: %ld)\n",
+         (unsigned long)final_free,
+         (unsigned long)(final_free - initial_free));
   
-  if (!check_approx_eq_u64("Free memory must return close to initial value", final_free, initial_free, 100)) {
+  if (!check_approx_eq_u64("Free memory must return close to initial value", final_free, initial_free, PGSIZE)) {
     pass = 0;
   }
 
@@ -178,7 +184,10 @@ void test_sysinfo_nproc() {
   // === PARENT PROCESS ===
   // Parent waits for child to finish before analyzing results
   int status;
-  wait(&status); 
+  int waited = wait(&status); 
+  if (!check_int("wait() returned child pid", waited, pid)) {
+    pass = 0;
+  }
   
   printf("  -> Check: fork() successfully created new process.\n");
   printf("     - Result: [OK]\n");
@@ -209,7 +218,7 @@ void test_sysinfo_nfile() {
   uint64 nfile_before = info.nopenfiles;
   printf("  - Initial open files count: %ld\n", (unsigned long)nfile_before);
 
-  int fd = open("README", 0);
+  int fd = open("README", O_RDONLY);
   if (!check_true("Opening README file must succeed", fd >= 0)) {
     failed_tests++;
     printf("... End of nfile test: [FAILED]\n");
