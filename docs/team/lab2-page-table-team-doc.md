@@ -1,24 +1,49 @@
-# Lab 2: Bảng Trang (Page Tables) — Yêu Cầu Chính Thức
+# HỆ ĐIỀU HÀNH
+# PROJECT 2 – Bảng Trang (Page Tables)
 
-> **Nguồn**: https://pdos.csail.mit.edu/6.1810/2025/labs/pgtbl.html
-> 
-> **Mục đích file này**: Dịch và tổng hợp yêu cầu bài lab từ tài liệu chính thức (tiếng Việt)
+## 1. Quy định chung:
+
+- Đồ án được thực hiện theo nhóm: mỗi nhóm tối đa **3 sinh viên**.
+- **Các bài tập giống nhau sẽ bị chấm 0 điểm cho toàn bộ bài thực hành (mặc dù có điểm cho các bài tập và đồ án thực hành khác).**
+- Môi trường lập trình: **Linux**
+
+## 2. Nộp bài:
+
+***Nộp bài tập trực tiếp trên trang web môn học (MOODLE), không chấp nhận nộp qua email hoặc các hình thức khác.***
+
+Tên tệp: **StudentID1_StudentID2_StudentID3.zip** (với StudentID1 < StudentID2 < StudentID3)
+
+Ví dụ: Nhóm của bạn có 3 sinh viên: 2312001, 2312002 và 2312003, tên tệp là: **2312001_2312002_2312003.zip**
+
+**Bao gồm:**
+
+*   **StudentID1_StudentID2_StudentID3_Report.pdf:** Các bài viết (báo cáo) nên ngắn gọn và súc tích. Đừng tốn quá nhiều công sức hoặc đưa mã nguồn vào bài viết của bạn. Mục đích của báo cáo là cho bạn cơ hội để làm rõ giải pháp của mình, bất kỳ vấn đề nào với công việc của bạn, và thêm thông tin có thể hữu ích cho việc chấm điểm. Nếu bạn gặp vấn đề hoặc sự cố cụ thể, các hướng tiếp cận bạn đã thử nhưng không hiệu quả, hoặc các khái niệm chưa được thực hiện đầy đủ, thì một lời giải thích trong báo cáo của bạn có thể giúp chúng tôi cho điểm thành phần.
+*   **Release:** Tệp diff (bản vá diff, Ví dụ: `$ git diff > <StudentID1_StudentID2_StudentID3>.patch`)
+*   **Source:** Tệp Zip của xv6 (phiên bản đã được làm sạch - make clean)
+
+***Lưu ý: Cần thực hiện đúng các yêu cầu trên, nếu không, bài làm sẽ không được chấm.***
 
 ---
 
-## Tổng Quan
+## 3. Phỏng vấn Demo
 
-Trong bài lab này, bạn sẽ khám phá bảng trang (page tables) và sửa đổi chúng để triển khai các tính năng phổ biến của hệ điều hành.
+Việc thực hiện của bạn được chấm điểm dựa trên sự hoàn thiện, tính đúng đắn, phong cách lập trình, sự kỹ lưỡng trong kiểm thử, giải pháp của bạn và sự hiểu biết về mã nguồn.
 
-### Tài Liệu Cần Đọc Trước Khi Code
+Khi quản lý khóa học này, chúng tôi cố gắng hết sức để đưa ra đánh giá công bằng cho từng cá nhân dựa trên đóng góp của mỗi người vào dự án.
 
-- Chương 3 của [xv6 book](https://pdos.csail.mit.edu/6.1810/2025/xv6/book-riscv-rev5.pdf)
-- `kernel/memlayout.h` - cấu trúc bố cục bộ nhớ
-- `kernel/vm.c` - mã nguồn virtual memory chính
-- `kernel/kalloc.c` - mã cấp phát và giải phóng bộ nhớ vật lý
-- [RISC-V privileged architecture manual](https://drive.google.com/file/d/17GeetSnT5wW3xNuAHI95-SI1gPGd5sJ_/view)
+## 4. Các yêu cầu
 
-### Chuẩn Bị
+Trong bài lab này, bạn sẽ khám phá các bảng trang (page tables) và sửa đổi chúng để tăng tốc một số system calls (lời gọi hệ thống) nhất định và để phát hiện những trang nào đã được truy cập.
+
+Trước khi bắt đầu viết code, hãy đọc Chương 3 của [sách xv6](https://pdos.csail.mit.edu/6.828/2023/xv6/book-riscv-rev3.pdf), và các tệp liên quan:
+
+*   `kernel/memlayout.h`, tệp này nắm giữ bố cục của bộ nhớ.
+*   `kernel/vm.c`, tệp này chứa hầu hết code về bộ nhớ ảo (VM).
+*   `kernel/kalloc.c`, tệp này chứa code để cấp phát và giải phóng bộ nhớ vật lý.
+
+Cũng có thể sẽ hữu ích khi tham khảo [tài liệu hướng dẫn kiến trúc đặc quyền RISC-V](https://github.com/riscv/riscv-isa-manual/releases/download/Draft-20201127-26a57d0/riscv-privileged-20211203.pdf).
+
+Để bắt đầu bài lab, hãy chuyển sang nhánh `pgtbl`:
 
 ```bash
 $ git fetch
@@ -26,225 +51,69 @@ $ git checkout pgtbl
 $ make clean
 ```
 
----
+### In một bảng trang (Print a page table)
 
-## Phần 1: Kiểm Tra Bảng Trang Tiến Trình Người Dùng (Easy)
+Để giúp bạn hình dung các bảng trang RISC-V, và có lẽ để hỗ trợ gỡ lỗi sau này, nhiệm vụ này là viết một hàm in ra nội dung của một bảng trang.
 
-**Mục tiêu**: Giúp bạn hiểu bảng trang RISC-V bằng cách giải thích bảng trang của một tiến trình người dùng.
+Định nghĩa một hàm có tên là `vmprint()`. Nó sẽ nhận một đối số `pagetable_t`, và in bảng trang đó theo định dạng được mô tả dưới đây.
 
-### Yêu cầu
-
-1. Chạy `make qemu` và chạy chương trình `pgtbltest`
-2. Hàm `print_pgtbl` in ra các mục PTE cho 10 trang đầu và 10 trang cuối của tiến trình `pgtbltest` sử dụng system call `pgpte` (đã được thêm sẵn cho lab này)
-3. **Nhiệm vụ**: Với mỗi mục PTE trong output của `print_pgtbl`, **giải thích** nó chứa gì về mặt logic và các bit quyền (permission bits) là gì
-
-### Output Mẫu
-
-```
-va 0 pte 0x21FCF45B pa 0x87F3D000 perm 0x5B
-va 1000 pte 0x21FCE85B pa 0x87F3A000 perm 0x5B
-...
-va 0xFFFFD000 pte 0x0 pa 0x0 perm 0x0
-va 0xFFFFE000 pte 0x21FD80C7 pa 0x87F60000 perm 0xC7
-va 0xFFFFF000 pte 0x20001C4B pa 0x80007000 perm 0x4B
-```
-
-### Gợi ý
-
-Tham khảo Hình 3.4 trong sách xv6 (lưu ý: hình có thể có tập hợp trang hơi khác so với tiến trình được kiểm tra).
-
----
-
-## Phần 2: Tăng Tốc System Calls - `ugetpid()` (Easy)
-
-**Mục tiêu**: Một số hệ điều hành (như Linux) tăng tốc các system call nhất định bằng cách chia sẻ dữ liệu trong vùng chỉ đọc giữa userspace và kernel. Điều này loại bỏ nhu cầu chuyển đổi kernel khi thực hiện các system call này.
-
-### Yêu cầu
-
-1. Khi mỗi tiến trình được tạo, ánh xạ **một trang chỉ đọc** tại địa chỉ `USYSCALL` (được định nghĩa trong `memlayout.h`)
-2. Tại đầu trang này, lưu trữ một `struct usyscall` (cũng được định nghĩa trong `memlayout.h`)
-3. Khởi tạo struct này để lưu **PID của tiến trình hiện tại**
-4. Hàm `ugetpid()` đã được cung cấp sẵn ở phía userspace và sẽ tự động sử dụng ánh xạ USYSCALL
-
-### Tiêu Chí Hoàn Thành
-
-Test case `ugetpid` pass khi chạy `pgtbltest`
-
-### Gợi ý
-
-- Chọn các bit quyền (permission bits) cho phép userspace **chỉ đọc** trang
-- Có một số việc cần làm trong vòng đời của một trang mới. Tham khảo cách xử lý trapframe trong `kernel/proc.c`
-
-### Câu Hỏi Cần Trả Lời
-
-> Những system call nào khác của xv6 có thể được tăng tốc bằng trang chia sẻ này? Giải thích cách thực hiện.
-
----
-
-## Phần 3: In Bảng Trang - `vmprint()` (Easy)
-
-**Mục tiêu**: Giúp bạn trực quan hóa bảng trang RISC-V và hỗ trợ debug trong tương lai.
-
-### Yêu cầu
-
-1. Viết hàm `vmprint()` trong `vm.c` để in nội dung của bảng trang
-2. System call `kpgtbl()` đã được thêm sẵn, nó gọi `vmprint()` trong `vm.c`
-3. Hàm nhận tham số `pagetable_t` và in bảng trang theo định dạng mô tả bên dưới
-
-### Output Mẫu (khi chạy test `print_kpgtbl()`)
-
-```
-page table 0x0000000087f22000
- ..0x0000000000000000: pte 0x0000000021fc7801 pa 0x0000000087f1e000
- .. ..0x0000000000000000: pte 0x0000000021fc7401 pa 0x0000000087f1d000
- .. .. ..0x0000000000000000: pte 0x0000000021fc7c5b pa 0x0000000087f1f000
- .. .. ..0x0000000000001000: pte 0x0000000021fc705b pa 0x0000000087f1c000
- .. .. ..0x0000000000002000: pte 0x0000000021fc6cd7 pa 0x0000000087f1b000
- .. .. ..0x0000000000003000: pte 0x0000000021fc6807 pa 0x0000000087f1a000
- .. .. ..0x0000000000004000: pte 0x0000000021fc64d7 pa 0x0000000087f19000
- ..0x0000003fc0000000: pte 0x0000000021fc8401 pa 0x0000000087f21000
- .. ..0x0000003fffe00000: pte 0x0000000021fc8001 pa 0x0000000087f20000
- .. .. ..0x0000003fffffd000: pte 0x0000000021fd4813 pa 0x0000000087f52000
- .. .. ..0x0000003fffffe000: pte 0x0000000021fd00c7 pa 0x0000000087f40000
- .. .. ..0x0000003ffffff000: pte 0x0000000020001c4b pa 0x0000000080007000
+```text
+page table 0x0000000087f6b000
+..0: pte 0x0000000021fd9c01 pa 0x0000000087f67000
+.. ..0: pte 0x0000000021fd9801 pa 0x0000000087f66000
+.. .. ..0: pte 0x0000000021fda01b pa 0x0000000087f68000
+.. .. ..1: pte 0x0000000021fd9417 pa 0x0000000087f65000
+.. .. ..2: pte 0x0000000021fd9007 pa 0x0000000087f64000
+.. .. ..3: pte 0x0000000021fd8c17 pa 0x0000000087f63000
+..255: pte 0x0000000021fda801 pa 0x0000000087f6a000
+.. ..511: pte 0x0000000021fda401 pa 0x0000000087f69000
+.. .. ..509: pte 0x0000000021fdcc13 pa 0x0000000087f73000
+.. .. ..510: pte 0x0000000021fdd007 pa 0x0000000087f74000
+.. .. ..511: pte 0x0000000020001c0b pa 0x0000000080007000
+init: starting sh
 ```
 
-### Định Dạng Output
+Dòng đầu tiên hiển thị đối số truyền vào `vmprint`. Sau đó là một dòng cho mỗi PTE (Page Table Entry), bao gồm các PTE tham chiếu đến các trang bảng trang (page-table pages) nằm sâu hơn trong cây. Mỗi dòng PTE được thụt lề bằng một số lượng chuỗi " .." biểu thị độ sâu của nó trong cây. Mỗi dòng PTE hiển thị chỉ mục PTE trong trang bảng trang của nó, các bit pte, và địa chỉ vật lý được trích xuất từ PTE. Đừng in các PTE không hợp lệ (not valid). Trong ví dụ trên, trang bảng trang cấp cao nhất có các ánh xạ cho mục 0 và 255. Cấp tiếp theo xuống cho mục 0 chỉ có chỉ mục 0 được ánh xạ, và cấp dưới cùng cho chỉ mục 0 đó có các mục 0, 1, và 2 được ánh xạ.
 
-- Dòng đầu tiên hiển thị tham số truyền vào `vmprint`
-- Mỗi dòng PTE được thụt lề bằng `" .."` theo độ sâu trong cây
-- Mỗi dòng PTE hiển thị: địa chỉ ảo (VA), các bit PTE, và địa chỉ vật lý (PA) được trích xuất từ PTE
-- **KHÔNG in các PTE không hợp lệ (invalid)**
+Bạn phải cung cấp một cách để in ra bảng trang của tiến trình khi nó được thực thi mà không làm ảnh hưởng đến system call `exec` hiện có. Điều này có nghĩa là system call `exec` hiện tại vẫn được sử dụng để thực thi một chương trình bình thường và bảng trang của tiến trình chỉ được in ra khi người dùng muốn.
 
-### Gợi ý
+Một số gợi ý:
 
-- Sử dụng các macro ở cuối file `kernel/riscv.h`
-- Hàm `freewalk` có thể là nguồn cảm hứng
-- Sử dụng `%p` trong `printf` để in đầy đủ 64-bit hex PTEs và địa chỉ
+*   Bạn nên kiểm tra mã nguồn của system call `exec` trong `kernel/sysfile.c` và hàm `exec()` trong `kernel/exec.c`.
+*   Hàm `walk()` và `freewalk()` trong `kernel/vm.c` có thể truyền cảm hứng.
+*   Bạn có thể đặt `vmprint()` trong `kernel/vm.c`.
+*   `vmprint(p->pagetable)` nên được gọi trong `exec.c` ngay trước khi trả về `argc`.
+*   Sử dụng các macro ở cuối tệp `kernel/riscv.h`.
+*   Định nghĩa nguyên mẫu (prototype) cho `vmprint` trong `kernel/defs.h` để bạn có thể gọi nó từ `exec.c`.
+*   Sử dụng `%p` trong các lệnh gọi `printf` của bạn để in ra đầy đủ các PTE hex 64-bit và các địa chỉ như trong ví dụ.
 
-### Câu Hỏi Cần Trả Lời
+Đối với mỗi trang lá (leaf page) trong đầu ra của `vmprint`, hãy giải thích những gì nó chứa về mặt logic và các bit cấp quyền của nó là gì. Hình 3.4 trong sách xv6 có thể hữu ích, mặc dù lưu ý rằng hình đó có thể có tập hợp các trang hơi khác so với tiến trình `init` đang được kiểm tra ở đây.
 
-> Với mỗi trang lá (leaf page) trong output của `vmprint`, giải thích nó chứa gì về mặt logic, các bit quyền là gì, và nó liên quan thế nào với output của bài tập `print_pgtbl()` trước đó.
+### Phát hiện những trang nào đã được truy cập (Detect which pages have been accessed)
 
----
+Một số trình thu gom rác (một dạng quản lý bộ nhớ tự động) có thể hưởng lợi từ thông tin về việc những trang nào đã được truy cập (đọc hoặc ghi). Trong phần này của bài lab, bạn sẽ thêm một tính năng mới vào xv6 để phát hiện và báo cáo thông tin này đến không gian người dùng (userspace) bằng cách kiểm tra các bit truy cập trong bảng trang RISC-V. Phần cứng RISC-V page walker đánh dấu các bit này trong PTE bất cứ khi nào nó giải quyết một lần trượt TLB (TLB miss).
 
-## Phần 4: Sử Dụng Superpages (Moderate/Hard)
+Công việc của bạn là hiện thực `pgaccess()`, một system call báo cáo những trang nào đã được truy cập. System call này nhận ba đối số. Thứ nhất, nó nhận địa chỉ ảo bắt đầu của trang người dùng đầu tiên cần kiểm tra. Thứ hai, nó nhận số lượng trang cần kiểm tra. Cuối cùng, nó nhận một địa chỉ người dùng đến một bộ đệm (buffer) để lưu kết quả vào một bitmask (một cấu trúc dữ liệu sử dụng một bit cho mỗi trang và trang đầu tiên tương ứng với bit có trọng số thấp nhất - least significant bit). Bạn sẽ nhận được trọn điểm cho phần này của bài lab nếu test case `pgaccess` vượt qua khi chạy `pgtbltest`.
 
-**Mục tiêu**: Phần cứng phân trang RISC-V hỗ trợ các trang **2 megabyte** cũng như các trang 4096-byte thông thường. Ý tưởng chung của các trang lớn hơn được gọi là **superpages**, và trang 2MB được gọi là **megapages**.
+Một số gợi ý:
 
-### Cách Hoạt Động
+*   Đọc `pgaccess_test()` trong `user/pgtbltest.c` để xem `pgaccess` được sử dụng như thế nào.
+*   Bắt đầu bằng cách hiện thực `sys_pgaccess()` trong `kernel/sysproc.c`.
+*   Bạn sẽ cần phân tích các đối số bằng cách sử dụng `argaddr()` và `argint()`.
+*   Đối với bitmask đầu ra, dễ dàng hơn nếu lưu trữ một bộ đệm tạm thời trong kernel và sao chép nó sang người dùng (thông qua `copyout()`) sau khi điền vào đó các bit đúng.
+*   Bạn có thể đặt giới hạn trên cho số lượng trang có thể được quét.
+*   `walk()` trong `kernel/vm.c` rất hữu ích để tìm đúng các PTE.
+*   Bạn sẽ cần định nghĩa `PTE_A`, bit truy cập, trong `kernel/riscv.h`. Tham khảo [tài liệu kiến trúc đặc quyền RISC-V](https://github.com/riscv/riscv-isa-manual/releases/download/Draft-20201127-26a57d0/riscv-privileged-20211203.pdf) để xác định giá trị của nó.
+*   Hãy chắc chắn xóa `PTE_A` sau khi kiểm tra xem nó có được thiết lập hay không. Nếu không, sẽ không thể xác định liệu trang có được truy cập kể từ lần cuối cùng `pgaccess()` được gọi hay không (tức là, bit sẽ được thiết lập mãi mãi).
+*   `vmprint()` có thể hữu ích để gỡ lỗi các bảng trang.
 
-- Hệ điều hành tạo superpage bằng cách đặt bit `PTE_V` và `PTE_R` trong PTE cấp 1 (level-1)
-- Đặt số trang vật lý (physical page number) trỏ đến đầu vùng 2MB của bộ nhớ vật lý
-- Địa chỉ vật lý này **phải được căn chỉnh 2MB** (tức là bội số của 2MB)
-- Tham khảo: RISC-V privileged manual, trang 112 (tìm "megapage" và "superpage")
+## 5. Điểm (Grade)
 
-### Lợi Ích
+| Số | Bài tập | Điểm |
+| :--- | :--- | :--- |
+| 1 | Print a page table (In một bảng trang) | 5 |
+| 2 | Detect which pages have been accessed (Phát hiện trang đã truy cập) | 5 |
 
-- Giảm lượng bộ nhớ vật lý sử dụng cho bảng trang
-- Giảm cache miss trong TLB
-- Với một số chương trình, điều này dẫn đến tăng hiệu suất đáng kể
+## 6. Tài liệu tham khảo (Reference)
 
-### Yêu Cầu Cụ Thể
-
-1. Sửa đổi kernel xv6 để sử dụng superpages
-2. Nếu một chương trình người dùng gọi `sbrk()` với kích thước **>= 2 megabytes**, VÀ vùng địa chỉ mới tạo bao gồm một hoặc nhiều vùng được **căn chỉnh 2MB** và có kích thước **>= 2MB**, kernel nên sử dụng **một superpage duy nhất** (thay vì hàng trăm trang thông thường)
-
-### Tiêu Chí Hoàn Thành
-
-Các test case `superpg_fork` và `superpg_free` pass khi chạy `pgtbltest`
-
-### Gợi Ý Chi Tiết
-
-1. **Đọc test trước**: `superpg_fork` và `superpg_free` trong `user/pgtbltest.c`
-
-2. **Điểm khởi đầu**: `sys_sbrk` trong `kernel/sysproc.c`, được gọi bởi system call `sbrk`. Theo dõi đường dẫn mã đến hàm `growproc` - nơi cấp phát bộ nhớ eager cho sbrk
-
-3. **Cấp phát vùng 2MB**:
-   - Sửa `kalloc.c` để dành riêng một vài vùng 2MB của bộ nhớ vật lý
-   - Tạo các hàm `superalloc()` và `superfree()`
-   - Bạn chỉ cần một số ít (handful) các chunk 2MB bộ nhớ
-
-4. **Fork và Exit**:
-   - Superpages phải được **cấp phát** khi tiến trình có superpages fork
-   - Superpages phải được **giải phóng** khi tiến trình exit
-   - Cần sửa `uvmcopy()` và `uvmunmap()`
-
-5. **Demote superpage**:
-   - Khi `sbrk` giải phóng **một phần** của superpage (ví dụ: giải phóng 4096 bytes cuối của superpage)
-   - Bạn cần **"demote"** (hạ cấp) superpage thành các trang thông thường
-
-### Tài Liệu Tham Khảo Nâng Cao
-
-- [Juan Navarro et al. "Practical, transparent operating system support for superpages." SIGOPS 2002](https://www.usenix.org/conference/osdi-02/practical-transparent-operating-system-support-superpages)
-- [A comprehensive analysis of superpage management mechanism and policies (ATC'20)](https://www.usenix.org/conference/atc20/presentation/zhu-weixi)
-
----
-
-## Nộp Bài
-
-### Thời Gian Làm Bài
-
-Tạo file `time.txt`, ghi một số nguyên duy nhất là số giờ bạn đã dành cho lab này.
-
-### Câu Trả Lời
-
-Viết câu trả lời trong file `answers-pgtbl.txt`. Commit cả hai file.
-
-### Nộp Bài
-
-```bash
-$ make grade      # Đảm bảo code pass tất cả tests
-$ make zipball    # Tạo file lab.zip để nộp
-```
-
----
-
-## Bài Tập Thử Thách (Optional)
-
-- Triển khai một số ý tưởng từ paper được tham chiếu ở trên để thiết kế superpage thực tế hơn
-- Bỏ ánh xạ (unmap) trang đầu tiên của tiến trình người dùng để việc dereference null pointer sẽ gây ra fault. Bạn cần sửa `user.ld` để đoạn text bắt đầu từ, ví dụ, 4096 thay vì 0
-- Thêm một system call báo cáo các dirty pages (trang đã sửa đổi) sử dụng `PTE_D`
-
----
-
-## Tóm Tắt Các Phần
-
-| Phần | Độ Khó | Mô Tả | Files Chính |
-|------|--------|-------|-------------|
-| Inspect page table | Easy | Giải thích output của `print_pgtbl` | `answers-pgtbl.txt` |
-| Speed up syscalls (`ugetpid`) | Easy | Ánh xạ trang USYSCALL với PID | `kernel/proc.c`, `kernel/vm.c` |
-| Print page table (`vmprint`) | Easy | In bảng trang theo định dạng | `kernel/vm.c` |
-| Superpages | Moderate/Hard | Sử dụng trang 2MB cho sbrk lớn | `kernel/kalloc.c`, `kernel/vm.c`, `kernel/sysproc.c` |
-
----
-
-## Phụ Lục: PTE Flags Reference
-
-> Trích từ sách xv6 và `kernel/riscv.h`
-
-| Cờ | Bit | Ý Nghĩa |
-|----|-----|---------|
-| `PTE_V` | 0 | Valid - Trang có hợp lệ/được ánh xạ không? |
-| `PTE_R` | 1 | Read - Có được phép đọc trang không? |
-| `PTE_W` | 2 | Write - Có được phép ghi trang không? |
-| `PTE_X` | 3 | Execute - Có được phép thực thi mã từ trang không? |
-| `PTE_U` | 4 | User - Cho phép truy cập từ user mode? |
-| `PTE_G` | 5 | Global - Trang global (không flush khi ASID thay đổi) |
-| `PTE_A` | 6 | Accessed - Trang đã được truy cập (hardware đặt) |
-| `PTE_D` | 7 | Dirty - Trang đã được ghi (hardware đặt) |
-
-### Macros Hữu Ích (kernel/riscv.h)
-
-```c
-#define PGSIZE 4096           // Kích thước trang thường
-#define PGSHIFT 12            // Số bit offset
-
-#define PA2PTE(pa) ((((uint64)pa) >> 12) << 10)  // PA → PTE
-#define PTE2PA(pte) (((pte) >> 10) << 12)        // PTE → PA
-#define PTE_FLAGS(pte) ((pte) & 0x3FF)           // Lấy flags từ PTE
-```
-
----
-
-*Tài liệu dịch từ https://pdos.csail.mit.edu/6.1810/2025/labs/pgtbl.html*
+*   [https://pdos.csail.mit.edu/6.1810/2023/labs/pgtbl.html](https://pdos.csail.mit.edu/6.1810/2023/labs/pgtbl.html)
