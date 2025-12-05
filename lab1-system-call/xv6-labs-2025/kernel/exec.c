@@ -135,6 +135,13 @@ kexec(char *path, char **argv)
   p->trapframe->sp = sp; // initial stack pointer
   proc_freepagetable(oldpagetable, oldsz);
 
+  // ================ NPHOANG ================
+  // IN BẢNG TRANG CỦA TIẾN TRÌNH ĐẦU TIÊN (chỉ cho init process)
+  if(p->pid == 1) {  // Chỉ in cho tiến trình init (PID = 1)
+    vmprint(p->pagetable);
+  }
+  // ================ NPHOANG ================
+
   return argc; // this ends up in a0, the first argument to main(argc, argv)
 
  bad:

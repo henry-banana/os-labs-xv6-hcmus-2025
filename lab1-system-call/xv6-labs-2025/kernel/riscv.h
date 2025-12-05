@@ -1,5 +1,9 @@
 #ifndef __ASSEMBLER__
 
+// ================ NPHOANG ================
+#define PTE_LEAF(pte) ((pte) & (PTE_R | PTE_W | PTE_X))
+// ================ NPHOANG ================
+
 // which hart (core) is this?
 static inline uint64
 r_mhartid()

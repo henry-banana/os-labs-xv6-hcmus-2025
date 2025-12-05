@@ -1,3 +1,7 @@
+// ================ NPHOANG ================
+#define LAB_PGTBL
+// ================ NPHOANG ================
+
 #include "param.h"
 #include "types.h"
 #include "memlayout.h"
@@ -140,15 +144,48 @@ walkaddr(pagetable_t pagetable, uint64 va)
   return pa;
 }
 
-
+// ================ NPHOANG ================
 #if defined(LAB_PGTBL) || defined(SOL_MMAP) || defined(SOL_COW)
+// Helper function to recursively print page table entries
 void
-vmprint(pagetable_t pagetable) {
-  // your code here
+vmprint_helper(pagetable_t pagetable, int level)
+{
+  // Duyệt qua tất cả 512 PTEs trong page table hiện tại
+  for(int i = 0; i < 512; ++i) {
+    pte_t pte = pagetable[i];
+
+    // Chỉ in các PTE hợp lệ (có bit PTE_V = 1)
+    if(pte & PTE_V) {
+      // In thụt đầu dòng theo level (mỗi level thêm " ..")
+      for(int j = 0; j <= level; ++j) {
+        printf(" ..");
+      }
+
+      // In index, giá trị PTE, và địa chỉ vật lý
+      printf("%d: pte %p pa %p\n",
+             i,                     // Index của PTE trong page table
+             (void*)pte,            // Giá trị đầy đủ của PTE (64-bit)
+             (void*)PTE2PA(pte));   // Địa chỉ vật lý được trích xuất từ PTE
+
+      // Nếu đây KHÔNG phải là leaf page (kiểm tra bằng cờ R|W|X)
+      // thì đệ quy xuống level tiếp theo
+      if((pte & (PTE_R|PTE_W|PTE_X)) == 0 && level < 2) {
+        // PTE này trỏ đến một page table ở level thấp hơn
+        uint64 child_pa = PTE2PA(pte);
+        vmprint_helper((pagetable_t)child_pa, level + 1);
+      }
+    }
+  }
+}
+
+void
+vmprint(pagetable_t pagetable)
+{
+  printf("page table %p\n", pagetable);
+  vmprint_helper(pagetable, 0);
 }
 #endif
-
-
+// ================ NPHOANG ================
 
 // add a mapping to the kernel page table.
 // only used when booting.
